@@ -22,6 +22,8 @@ class Evaluator:
     def __init__(self, settings: Settings, model: Model):
         self.settings = settings
         self.model = model
+        self.last_avg_tokens = 0.0
+        self.last_filler_ratio = 0.0
 
         print()
         print(
@@ -158,6 +160,8 @@ class Evaluator:
         if self.settings.mode == AbliterationMode.AMPLIFY:
             print("  * Computing terseness metrics...")
             avg_tokens, filler_ratio = self.compute_terse_metrics()
+            self.last_avg_tokens = avg_tokens
+            self.last_filler_ratio = filler_ratio
             print(
                 f"  * Avg tokens: [bold]{avg_tokens:.1f}[/], "
                 f"filler ratio: [bold]{filler_ratio:.4f}[/]"

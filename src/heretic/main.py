@@ -596,8 +596,10 @@ def run():
         trial.set_user_attr("n_bad_prompts", len(evaluator.bad_prompts))
         if settings.mode == AbliterationMode.AMPLIFY:
             trial.set_user_attr("mode", "amplify")
-            trial.set_user_attr("avg_tokens", evaluator.base_avg_tokens)
-            trial.set_user_attr("filler_ratio", evaluator.base_filler_ratio)
+            trial.set_user_attr("base_avg_tokens", evaluator.base_avg_tokens)
+            trial.set_user_attr("base_filler_ratio", evaluator.base_filler_ratio)
+            trial.set_user_attr("trial_avg_tokens", evaluator.last_avg_tokens)
+            trial.set_user_attr("trial_filler_ratio", evaluator.last_filler_ratio)
         else:
             trial.set_user_attr("mode", "remove")
 
@@ -680,9 +682,13 @@ def run():
 
         def format_trial_title(trial) -> str:
             if is_amplify:
+                avg_tok = trial.user_attrs.get("trial_avg_tokens", 0)
+                fill_r = trial.user_attrs.get("trial_filler_ratio", 0)
                 return (
                     f"[Trial {trial.user_attrs['index']:>3}] "
-                    f"KL divergence: {trial.user_attrs['kl_divergence']:.4f}"
+                    f"Avg tokens: {avg_tok:.1f}, "
+                    f"Filler: {fill_r:.4f}, "
+                    f"KL div: {trial.user_attrs['kl_divergence']:.4f}"
                 )
             return (
                 f"[Trial {trial.user_attrs['index']:>3}] "

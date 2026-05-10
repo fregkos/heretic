@@ -302,14 +302,24 @@ def get_readme_intro(
     kl_div_str = f"{kl_div:.4f}"
 
     if is_amplify:
-        avg_tokens = trial.user_attrs.get("avg_tokens", "N/A")
-        filler_ratio = trial.user_attrs.get("filler_ratio", "N/A")
+        trial_avg_tokens = trial.user_attrs.get("trial_avg_tokens", "N/A")
+        trial_filler_ratio = trial.user_attrs.get("trial_filler_ratio", "N/A")
+        base_avg_tokens = trial.user_attrs.get("base_avg_tokens", "N/A")
+        base_filler_ratio = trial.user_attrs.get("base_filler_ratio", "N/A")
+        if isinstance(trial_avg_tokens, (int, float)):
+            trial_avg_tokens = f"{trial_avg_tokens:.1f}"
+        if isinstance(trial_filler_ratio, (int, float)):
+            trial_filler_ratio = f"{trial_filler_ratio:.4f}"
+        if isinstance(base_avg_tokens, (int, float)):
+            base_avg_tokens = f"{base_avg_tokens:.1f}"
+        if isinstance(base_filler_ratio, (int, float)):
+            base_filler_ratio = f"{base_filler_ratio:.4f}"
         performance_table = (
             f"| Metric | This model | Original model ({model_link}) |\n"
             f"| :----- | :--------: | :---------------------------: |\n"
             f"| **KL divergence** | {kl_div_str} | 0 *(by definition)* |\n"
-            f"| **Avg tokens** | {avg_tokens} | baseline |\n"
-            f"| **Filler ratio** | {filler_ratio} | baseline |"
+            f"| **Avg tokens** | {trial_avg_tokens} | {base_avg_tokens} |\n"
+            f"| **Filler ratio** | {trial_filler_ratio} | {base_filler_ratio} |"
         )
     else:
         refusals = trial.user_attrs["refusals"]
@@ -379,6 +389,18 @@ def format_hf_link(
         link += f" (Commit: [`{commit[:7]}`]({commit_url}))"
 
     return link
+
+
+def _format_reproduce_trial_metrics(trial: Trial) -> str:
+    if trial.user_attrs.get("mode") == "amplify":
+        avg_tokens = trial.user_attrs.get("trial_avg_tokens", "N/A")
+        filler_ratio = trial.user_attrs.get("trial_filler_ratio", "N/A")
+        if isinstance(avg_tokens, (int, float)):
+            avg_tokens = f"{avg_tokens:.1f}"
+        if isinstance(filler_ratio, (int, float)):
+            filler_ratio = f"{filler_ratio:.4f}"
+        return f"- **Avg tokens:** {avg_tokens}\n- **Filler ratio:** {filler_ratio}"
+    return f"- **Refusals:** {trial.user_attrs['refusals']}/{trial.user_attrs['n_bad_prompts']}"
 
 
 def generate_reproduce_readme(
@@ -518,7 +540,7 @@ This directory contains the necessary information and assets to reproduce the re
 
 - **Trial number:** {trial.user_attrs["index"]}
 - **KL divergence:** {trial.user_attrs["kl_divergence"]:.6f}
-- **Refusals:** {trial.user_attrs["refusals"]}/{trial.user_attrs["n_bad_prompts"]}
+{_format_reproduce_trial_metrics(trial)}
 
 {system_report}## Environment
 
@@ -588,6 +610,12 @@ def generate_reproduce_json(
         },
         "hashes": uploaded_model_hashes,
     }
+
+    if trial.user_attrs.get("mode") == "amplify":
+        data["metrics"]["base_avg_tokens"] = trial.user_attrs.get("base_avg_tokens")
+        data["metrics"]["base_filler_ratio"] = trial.user_attrs.get("base_filler_ratio")
+        data["metrics"]["trial_avg_tokens"] = trial.user_attrs.get("trial_avg_tokens")
+        data["metrics"]["trial_filler_ratio"] = trial.user_attrs.get("trial_filler_ratio")
 
     if include_system_information:
         data["system"] = {
