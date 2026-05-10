@@ -175,7 +175,7 @@ def run_lm_eval(model_path: str, tasks: list[str], quantization: str = "bnb_4bit
 
 def main():
     parser = argparse.ArgumentParser(description="Evaluate amplified models")
-    parser.add_argument("--baseline", default="google/gemma-3-4b-it", help="Baseline model path")
+    parser.add_argument("--baseline", default="Qwen/Qwen2.5-3B-Instruct", help="Baseline model path")
     parser.add_argument("--amplified", default=None, help="Amplified model path")
     parser.add_argument("--finetuned", default=None, help="Finetuned model path (optional)")
     parser.add_argument("--output-dir", default="./results", help="Output directory for results")
