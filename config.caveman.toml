@@ -51,8 +51,8 @@ row_normalization = "none"
 
 winsorization_quantile = 1.0
 
-n_trials = 200
-n_startup_trials = 60
+n_trials = 20
+n_startup_trials = 10
 
 # KL divergence tuning for amplification
 # Higher scale = more weight on preserving original distribution
