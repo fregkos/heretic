@@ -156,7 +156,7 @@ def generate_via_api(
 
 def main():
     parser = argparse.ArgumentParser(description="Generate paired caveman/normal datasets")
-    parser.add_argument("--model", default="Qwen/Qwen3-4B-Instruct", help="Model to use for local generation")
+    parser.add_argument("--model", default="google/gemma-3-4b-it", help="Model to use for local generation")
     parser.add_argument("--output-dir", default="./data", help="Output directory")
     parser.add_argument("--num-prompts", type=int, default=300, help="Number of prompts to use")
     parser.add_argument("--max-new-tokens", type=int, default=200, help="Max tokens per response")

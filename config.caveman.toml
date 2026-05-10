@@ -8,8 +8,8 @@
 
 mode = "amplify"
 
-# Model: Qwen3-4B-Instruct (primary), Gemma-3-4b-it (fallback)
-model = "Qwen/Qwen3-4B-Instruct"
+# Model: Gemma-3-4b-it (non-gated, well-tested with Heretic)
+model = "google/gemma-3-4b-it"
 
 # 4-bit quantization for 8GB VRAM constraint
 quantization = "bnb_4bit"
