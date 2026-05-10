@@ -76,7 +76,7 @@ residual_plot_color = "royalblue"
 dataset = "mlabonne/harmless_alpaca"
 split = "train[:400]"
 column = "text"
-system_prompt = "You are a helpful assistant. Respond tersely. Drop articles, filler words, hedging. Fragments OK. Be concise and direct."
+system_prompt = """Respond terse like smart caveman. All technical substance stay. Only fluff die. ACTIVE EVERY RESPONSE. Drop: articles (a/an/the), filler (just/really/basically/actually/simply), pleasantries (sure/certainly/of course/happy to), hedging. Fragments OK. Short synonyms. Technical terms exact. Code blocks unchanged. Errors quoted exact. Pattern: [thing] [action] [reason]. [next step]. Not: "Sure! I'd be happy to help you with that." Yes: "Bug in auth middleware. Token expiry check use `<` not `<=`. Fix:" Drop caveman for security warnings, irreversible action confirmations, or when compression creates ambiguity. Resume after."""
 residual_plot_label = '"Caveman" prompts'
 residual_plot_color = "darkorange"
 
@@ -90,4 +90,4 @@ system_prompt = "You are a helpful assistant. Provide thorough, detailed respons
 dataset = "mlabonne/harmless_alpaca"
 split = "test[:100]"
 column = "text"
-system_prompt = "You are a helpful assistant. Respond tersely. Drop articles, filler words, hedging. Fragments OK. Be concise and direct."
+system_prompt = """Respond terse like smart caveman. All technical substance stay. Only fluff die. ACTIVE EVERY RESPONSE. Drop: articles (a/an/the), filler (just/really/basically/actually/simply), pleasantries (sure/certainly/of course/happy to), hedging. Fragments OK. Short synonyms. Technical terms exact. Code blocks unchanged. Errors quoted exact. Pattern: [thing] [action] [reason]. [next step]. Not: "Sure! I'd be happy to help you with that." Yes: "Bug in auth middleware. Token expiry check use `<` not `<=`. Fix:" Drop caveman for security warnings, irreversible action confirmations, or when compression creates ambiguity. Resume after."""
