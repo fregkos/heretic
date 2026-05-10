@@ -62,7 +62,7 @@ from rich.table import Table
 from rich.traceback import install
 
 from .analyzer import Analyzer
-from .config import QuantizationMethod
+from .config import AbliterationMode, QuantizationMethod
 from .evaluator import Evaluator
 from .model import AbliterationParameters, Model, get_model_class
 from .reproduce import collect_reproducibles
@@ -431,15 +431,16 @@ def run():
         evaluator.get_score()
         return
 
+    direction_label = "behavioral" if settings.mode == AbliterationMode.AMPLIFY else "refusal"
     print()
-    print("Calculating per-layer refusal directions...")
+    print(f"Calculating per-layer {direction_label} directions...")
 
     needs_full_residuals = settings.print_residual_geometry or settings.plot_residuals
 
     if needs_full_residuals:
         print("* Obtaining residuals for good prompts...")
         good_residuals = model.get_residuals_batched(good_prompts)
-        print("* Obtaining residuals for bad prompts...")
+        print(f"* Obtaining residuals for {direction_label} prompts...")
         bad_residuals = model.get_residuals_batched(bad_prompts)
 
         good_means = good_residuals.mean(dim=0)
@@ -458,15 +459,21 @@ def run():
     else:
         print("* Obtaining residual mean for good prompts...")
         good_means = model.get_residuals_mean(good_prompts)
-        print("* Obtaining residual mean for bad prompts...")
+        print(f"* Obtaining residual mean for {direction_label} prompts...")
         bad_means = model.get_residuals_mean(bad_prompts)
 
     refusal_directions = F.normalize(bad_means - good_means, p=2, dim=1)
 
     if settings.orthogonalize_direction:
-        # Implements https://huggingface.co/blog/grimjim/projected-abliteration
-        # Adjust the refusal directions so that only the component that is
-        # orthogonal to the good direction is subtracted during abliteration.
+        if settings.mode == AbliterationMode.REMOVE:
+            # Implements https://huggingface.co/blog/grimjim/projected-abliteration
+            # Adjust the refusal directions so that only the component that is
+            # orthogonal to the good direction is subtracted during abliteration.
+            pass
+        elif settings.mode == AbliterationMode.AMPLIFY:
+            # For amplification: orthogonalize against the normal direction so
+            # only the "terseness-specific" component is amplified.
+            pass
         good_directions = F.normalize(good_means, p=2, dim=1)
         projection_vector = torch.sum(refusal_directions * good_directions, dim=1)
         refusal_directions = (
@@ -565,8 +572,9 @@ def run():
             print(f"  * {name} = [bold]{value}[/]")
         print("* Resetting model...")
         model.reset_model()
-        print("* Abliterating...")
-        model.abliterate(refusal_directions, direction_index, parameters)
+        action_label = "Amplifying" if settings.mode == AbliterationMode.AMPLIFY else "Abliterating"
+        print(f"* {action_label}...")
+        model.abliterate(refusal_directions, direction_index, parameters, mode=settings.mode)
         print("* Evaluating...")
         score, kl_divergence, refusals = evaluator.get_score()
 
@@ -586,6 +594,12 @@ def run():
         trial.set_user_attr("refusals", refusals)
         trial.set_user_attr("base_refusals", evaluator.base_refusals)
         trial.set_user_attr("n_bad_prompts", len(evaluator.bad_prompts))
+        if settings.mode == AbliterationMode.AMPLIFY:
+            trial.set_user_attr("mode", "amplify")
+            trial.set_user_attr("avg_tokens", evaluator.base_avg_tokens)
+            trial.set_user_attr("filler_ratio", evaluator.base_filler_ratio)
+        else:
+            trial.set_user_attr("mode", "remove")
 
         return score
 
@@ -662,13 +676,23 @@ def run():
                 min_divergence = kl_divergence
                 best_trials.append(trial)
 
+        is_amplify = settings.mode == AbliterationMode.AMPLIFY
+
+        def format_trial_title(trial) -> str:
+            if is_amplify:
+                return (
+                    f"[Trial {trial.user_attrs['index']:>3}] "
+                    f"KL divergence: {trial.user_attrs['kl_divergence']:.4f}"
+                )
+            return (
+                f"[Trial {trial.user_attrs['index']:>3}] "
+                f"Refusals: {trial.user_attrs['refusals']:>2}/{len(evaluator.bad_prompts)}, "
+                f"KL divergence: {trial.user_attrs['kl_divergence']:.4f}"
+            )
+
         choices = [
             Choice(
-                title=(
-                    f"[Trial {trial.user_attrs['index']:>3}] "
-                    f"Refusals: {trial.user_attrs['refusals']:>2}/{len(evaluator.bad_prompts)}, "
-                    f"KL divergence: {trial.user_attrs['kl_divergence']:.4f}"
-                ),
+                title=format_trial_title(trial),
                 value=trial,
             )
             for trial in best_trials
@@ -691,15 +715,15 @@ def run():
         print()
         print("[bold green]Optimization finished![/]")
         print()
-        print(
-            (
-                "The following trials resulted in Pareto optimal combinations of refusals and KL divergence. "
-                "After selecting a trial, you will be able to save the model, upload it to Hugging Face, "
-                "chat with it to test how well it works, or run standard benchmarks on it. "
-                "You can return to this menu later to select a different trial. "
-                "[yellow]Note that KL divergence values above 0.5 usually indicate significant damage to the original model's capabilities.[/]"
-            )
+        result_description = (
+            "The following trials resulted in Pareto optimal combinations of "
+            + ("terseness and KL divergence. " if is_amplify else "refusals and KL divergence. ")
+            + "After selecting a trial, you will be able to save the model, upload it to Hugging Face, "
+            "chat with it to test how well it works, or run standard benchmarks on it. "
+            "You can return to this menu later to select a different trial. "
+            "[yellow]Note that KL divergence values above 0.5 usually indicate significant damage to the original model's capabilities.[/]"
         )
+        print(result_description)
 
         while True:
             print()
@@ -755,7 +779,7 @@ def run():
             def reset_trial_model() -> None:
                 print("* Resetting model...")
                 model.reset_model()
-                print("* Abliterating...")
+                print(f"* {action_label}...")
                 model.abliterate(
                     refusal_directions,
                     trial.user_attrs["direction_index"],
@@ -763,14 +787,16 @@ def run():
                         k: AbliterationParameters(**v)
                         for k, v in trial.user_attrs["parameters"].items()
                     },
+                    mode=settings.mode,
                 )
 
             reset_trial_model()
 
             while True:
                 print()
+                model_label = "amplified" if is_amplify else "decensored"
                 action = prompt_select(
-                    "What do you want to do with the decensored model?",
+                    f"What do you want to do with the {model_label} model?",
                     [
                         "Save the model to a local folder",
                         "Upload the model to Hugging Face",
@@ -943,9 +969,13 @@ def run():
                                 if card.data.tags is None:
                                     card.data.tags = []
                                 card.data.tags.append("heretic")
-                                card.data.tags.append("uncensored")
-                                card.data.tags.append("decensored")
-                                card.data.tags.append("abliterated")
+                                if settings.mode == AbliterationMode.AMPLIFY:
+                                    card.data.tags.append("amplified")
+                                    card.data.tags.append("directional-amplification")
+                                else:
+                                    card.data.tags.append("uncensored")
+                                    card.data.tags.append("decensored")
+                                    card.data.tags.append("abliterated")
                                 if reproducibility_information != "none":
                                     card.data.tags.append("reproducible")
                                 card.text = (

@@ -29,7 +29,7 @@ from transformers.generation import (
     GenerateDecoderOnlyOutput,  # ty:ignore[possibly-missing-import]
 )
 
-from .config import QuantizationMethod, RowNormalization, Settings
+from .config import AbliterationMode, QuantizationMethod, RowNormalization, Settings
 from .system import empty_cache
 from .utils import Prompt, batchify, print
 
@@ -419,6 +419,7 @@ class Model:
         refusal_directions: Tensor,
         direction_index: float | None,
         parameters: dict[str, AbliterationParameters],
+        mode: AbliterationMode = AbliterationMode.REMOVE,
     ):
         if direction_index is None:
             refusal_direction = None
@@ -473,7 +474,8 @@ class Model:
                     module = cast(Linear, module)
 
                     # LoRA abliteration: delta W = -lambda * v * (v^T W)
-                    # lora_B = -lambda * v
+                    # lora_B = -lambda * v  (remove mode)
+                    # lora_B = +lambda * v  (amplify mode: adds direction instead of subtracting)
                     # lora_A = v^T W
 
                     # Use the FP32 refusal direction directly (no downcast/upcast)
@@ -518,9 +520,10 @@ class Model:
                     # v @ W -> (d_in,)
                     lora_A = (v @ W).view(1, -1)
 
-                    # Calculate lora_B = -weight * v
-                    # v is (d_out,)
-                    lora_B = (-weight * v).view(-1, 1)
+                    # Calculate lora_B = sign * weight * v
+                    # In amplify mode, the direction is added (+weight * v) instead of subtracted.
+                    sign = -1.0 if mode == AbliterationMode.REMOVE else 1.0
+                    lora_B = (sign * weight * v).view(-1, 1)
 
                     if self.settings.row_normalization == RowNormalization.PRE:
                         # Make the LoRA adapter apply to the original weight matrix.

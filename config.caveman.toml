@@ -1,0 +1,93 @@
+# Caveman Amplification Configuration
+# Directional amplification of terse/caveman behavioral direction.
+# In amplify mode, the LoRA direction is ADDED (not subtracted).
+#
+# good_prompts = prompts with normal (verbose) responses → normal direction
+# bad_prompts  = prompts with caveman (terse) responses → caveman direction
+# The "caveman direction" = bad_means - good_means is AMPLIFIED into weights.
+
+mode = "amplify"
+
+# Model: Qwen3-4B-Instruct (primary), Gemma-3-4b-it (fallback)
+model = "Qwen/Qwen3-4B-Instruct"
+
+# 4-bit quantization for 8GB VRAM constraint
+quantization = "bnb_4bit"
+
+dtypes = ["auto", "float16", "bfloat16", "float32"]
+
+device_map = "auto"
+
+offload_outputs_to_cpu = true
+
+batch_size = 0  # auto
+max_batch_size = 128
+
+# Longer responses needed to measure terseness properly
+max_response_length = 200
+
+# Caveman-style terseness markers (instead of refusal markers)
+refusal_markers = []
+
+# Fillers: hedging/verbosity indicators whose ABSENCE signals terseness
+filler_words = [
+    "just", "really", "basically", "actually", "simply",
+    "certainly", "definitely", "absolutely", "obviously", "clearly",
+    "essentially", "literally", "exactly", "totally", "completely",
+    "entirely", "quite", "rather", "somewhat", "perhaps",
+    "maybe", "probably", "possibly", "likely", "seemingly",
+    "apparently",
+]
+
+# System prompt for normal-style responses (baseline)
+system_prompt = "You are a helpful assistant."
+
+# Orthogonalize: keep only the "terseness-specific" component
+orthogonalize_direction = true
+
+# Start with "none" row normalization (amplification preserves norms better)
+# Test both "none" and "full" as recommended in the plan
+row_normalization = "none"
+
+winsorization_quantile = 1.0
+
+n_trials = 200
+n_startup_trials = 60
+
+# KL divergence tuning for amplification
+# Higher scale = more weight on preserving original distribution
+kl_divergence_scale = 1.0
+kl_divergence_target = 0.01
+
+# Plot labels for caveman direction
+residual_plot_title = 'PaCMAP Projection of Residual Vectors for "Normal" and "Caveman" Prompts'
+
+# good_prompts: Normal/verbose responses
+[good_prompts]
+dataset = "mlabonne/harmless_alpaca"
+split = "train[:400]"
+column = "text"
+system_prompt = "You are a helpful assistant. Provide thorough, detailed responses."
+residual_plot_label = '"Normal" prompts'
+residual_plot_color = "royalblue"
+
+# bad_prompts: Caveman/terse responses
+[bad_prompts]
+dataset = "mlabonne/harmless_alpaca"
+split = "train[:400]"
+column = "text"
+system_prompt = "You are a helpful assistant. Respond tersely. Drop articles, filler words, hedging. Fragments OK. Be concise and direct."
+residual_plot_label = '"Caveman" prompts'
+residual_plot_color = "darkorange"
+
+[good_evaluation_prompts]
+dataset = "mlabonne/harmless_alpaca"
+split = "test[:100]"
+column = "text"
+system_prompt = "You are a helpful assistant. Provide thorough, detailed responses."
+
+[bad_evaluation_prompts]
+dataset = "mlabonne/harmless_alpaca"
+split = "test[:100]"
+column = "text"
+system_prompt = "You are a helpful assistant. Respond tersely. Drop articles, filler words, hedging. Fragments OK. Be concise and direct."

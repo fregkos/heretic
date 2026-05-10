@@ -20,6 +20,11 @@ from pydantic_settings import (
 # exclude=True set in their field definitions if appropriate.
 
 
+class AbliterationMode(str, Enum):
+    REMOVE = "remove"
+    AMPLIFY = "amplify"
+
+
 class QuantizationMethod(str, Enum):
     NONE = "none"
     BNB_4BIT = "bnb_4bit"
@@ -88,6 +93,15 @@ class BenchmarkSpecification(BaseModel):
 
 class Settings(BaseSettings):
     model: str = Field(description="Hugging Face model ID, or path to model on disk.")
+
+    mode: AbliterationMode = Field(
+        default=AbliterationMode.REMOVE,
+        description=(
+            "Operation mode. "
+            '"remove" subtracts the direction (standard abliteration), '
+            '"amplify" adds the direction (behavioral amplification).'
+        ),
+    )
 
     model_commit: str | None = Field(
         default=None,
@@ -446,6 +460,41 @@ class Settings(BaseSettings):
             "ethical boundaries",
         ],
         description="Strings whose presence in a response (case insensitive) identifies the response as a refusal.",
+    )
+
+    filler_words: list[str] = Field(
+        default=[
+            "just",
+            "really",
+            "basically",
+            "actually",
+            "simply",
+            "certainly",
+            "definitely",
+            "absolutely",
+            "obviously",
+            "clearly",
+            "essentially",
+            "literally",
+            "exactly",
+            "totally",
+            "completely",
+            "entirely",
+            "quite",
+            "rather",
+            "somewhat",
+            "perhaps",
+            "maybe",
+            "probably",
+            "possibly",
+            "likely",
+            "seemingly",
+            "apparently",
+        ],
+        description=(
+            "Filler words and hedging terms whose frequency in responses indicates verbosity. "
+            "Used in amplify mode to compute terseness scores."
+        ),
     )
 
     system_prompt: str = Field(

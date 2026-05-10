@@ -27,7 +27,7 @@ from psutil import Process
 from questionary import Choice, Style
 from rich.console import Console
 
-from .config import DatasetSpecification, Settings
+from .config import AbliterationMode, DatasetSpecification, Settings
 from .system import (
     get_accelerator_info_dict,
     get_cpu_info_dict,
@@ -294,35 +294,52 @@ def get_readme_intro(
     else:
         reproducibility_instructions = ""
 
-    return f"""# This is a decensored version of {
-        model_link
-    }, made using [Heretic](https://github.com/p-e-w/heretic) v{version("heretic-llm")}
-{reproducibility_instructions}
-## Abliteration parameters
+    is_amplify = settings.mode == AbliterationMode.AMPLIFY
+    model_type_label = "directionally amplified" if is_amplify else "decensored"
+    params_header = "Amplification parameters" if is_amplify else "Abliteration parameters"
 
-| Parameter | Value |
-| :-------- | :---: |
-{
-        chr(10).join(
-            [
-                f"| **{name}** | {value} |"
-                for name, value in get_trial_parameters(trial).items()
-            ]
+    kl_div = trial.user_attrs["kl_divergence"]
+    kl_div_str = f"{kl_div:.4f}"
+
+    if is_amplify:
+        avg_tokens = trial.user_attrs.get("avg_tokens", "N/A")
+        filler_ratio = trial.user_attrs.get("filler_ratio", "N/A")
+        performance_table = (
+            f"| Metric | This model | Original model ({model_link}) |\n"
+            f"| :----- | :--------: | :---------------------------: |\n"
+            f"| **KL divergence** | {kl_div_str} | 0 *(by definition)* |\n"
+            f"| **Avg tokens** | {avg_tokens} | baseline |\n"
+            f"| **Filler ratio** | {filler_ratio} | baseline |"
         )
-    }
+    else:
+        refusals = trial.user_attrs["refusals"]
+        n_bad = trial.user_attrs["n_bad_prompts"]
+        base_refusals = trial.user_attrs["base_refusals"]
+        performance_table = (
+            f"| Metric | This model | Original model ({model_link}) |\n"
+            f"| :----- | :--------: | :---------------------------: |\n"
+            f"| **KL divergence** | {kl_div_str} | 0 *(by definition)* |\n"
+            f"| **Refusals** | {refusals}/{n_bad} | {base_refusals}/{n_bad} |"
+        )
 
-## Performance
+    params_rows = chr(10).join(
+        f"| **{name}** | {value} |"
+        for name, value in get_trial_parameters(trial).items()
+    )
+    heretic_version = version("heretic-llm")
 
-| Metric | This model | Original model ({model_link}) |
-| :----- | :--------: | :---------------------------: |
-| **KL divergence** | {trial.user_attrs["kl_divergence"]:.4f} | 0 *(by definition)* |
-| **Refusals** | {trial.user_attrs["refusals"]}/{trial.user_attrs["n_bad_prompts"]} | {
-        trial.user_attrs["base_refusals"]
-    }/{trial.user_attrs["n_bad_prompts"]} |
-
------
-
-"""
+    return (
+        f"# This is a {model_type_label} version of {model_link}, "
+        f"made using [Heretic](https://github.com/p-e-w/heretic) v{heretic_version}\n"
+        f"{reproducibility_instructions}\n"
+        f"## {params_header}\n\n"
+        f"| Parameter | Value |\n"
+        f"| :-------- | :---: |\n"
+        f"{params_rows}\n\n"
+        f"## Performance\n\n"
+        f"{performance_table}\n\n"
+        f"-----\n"
+    )
 
 
 def generate_config_toml(settings: Settings) -> str:
