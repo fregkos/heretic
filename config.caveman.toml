@@ -8,8 +8,8 @@
 
 mode = "amplify"
 
-# Model: Qwen2.5-3B-Instruct (non-gated, 3B params)
-model = "Qwen/Qwen2.5-3B-Instruct"
+# Model: Gemma-3-4b-it (gated, needs HF auth)
+model = "google/gemma-3-4b-it"
 
 # 4-bit quantization for 8GB VRAM constraint
 quantization = "bnb_4bit"
@@ -51,8 +51,8 @@ row_normalization = "none"
 
 winsorization_quantile = 1.0
 
-n_trials = 20
-n_startup_trials = 10
+n_trials = 200
+n_startup_trials = 60
 
 # KL divergence tuning for amplification
 # Higher scale = more weight on preserving original distribution
