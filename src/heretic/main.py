@@ -432,6 +432,7 @@ def run():
         return
 
     direction_label = "behavioral" if settings.mode == AbliterationMode.AMPLIFY else "refusal"
+    action_label = "Amplifying" if settings.mode == AbliterationMode.AMPLIFY else "Abliterating"
     print()
     print(f"Calculating per-layer {direction_label} directions...")
 
@@ -572,7 +573,6 @@ def run():
             print(f"  * {name} = [bold]{value}[/]")
         print("* Resetting model...")
         model.reset_model()
-        action_label = "Amplifying" if settings.mode == AbliterationMode.AMPLIFY else "Abliterating"
         print(f"* {action_label}...")
         model.abliterate(refusal_directions, direction_index, parameters, mode=settings.mode)
         print("* Evaluating...")
