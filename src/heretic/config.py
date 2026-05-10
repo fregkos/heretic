@@ -464,25 +464,24 @@ class Settings(BaseSettings):
 
     filler_words: list[str] = Field(
         default=[
+            # Filler (from caveman SKILL.md + compress.js)
             "just",
             "really",
             "basically",
             "actually",
             "simply",
+            "quite",
+            "very",
+            "essentially",
+            "literally",
+            # Pleasantries (from compress.js)
+            "please",
+            "kindly",
+            "sure",
             "certainly",
             "definitely",
             "absolutely",
-            "obviously",
-            "clearly",
-            "essentially",
-            "literally",
-            "exactly",
-            "totally",
-            "completely",
-            "entirely",
-            "quite",
-            "rather",
-            "somewhat",
+            # Hedging (from compress.js + SKILL.md)
             "perhaps",
             "maybe",
             "probably",
@@ -490,10 +489,24 @@ class Settings(BaseSettings):
             "likely",
             "seemingly",
             "apparently",
+            "somewhat",
+            "rather",
+            # Additional verbosity markers
+            "obviously",
+            "clearly",
+            "exactly",
+            "totally",
+            "completely",
+            "entirely",
+            # Articles (dropped in caveman mode)
+            "a",
+            "an",
+            "the",
         ],
         description=(
             "Filler words and hedging terms whose frequency in responses indicates verbosity. "
-            "Used in amplify mode to compute terseness scores."
+            "Used in amplify mode to compute terseness scores. "
+            "Sourced from caveman SKILL.md and compress.js programmatic definitions."
         ),
     )
 

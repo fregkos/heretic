@@ -28,12 +28,20 @@ import torch
 from transformers import AutoModelForCausalLM, AutoTokenizer, BitsAndBytesConfig
 
 FILLER_WORDS = {
+    # Filler (from caveman SKILL.md + compress.js)
     "just", "really", "basically", "actually", "simply",
-    "certainly", "definitely", "absolutely", "obviously", "clearly",
-    "essentially", "literally", "exactly", "totally", "completely",
-    "entirely", "quite", "rather", "somewhat", "perhaps",
-    "maybe", "probably", "possibly", "likely", "seemingly",
-    "apparently", "a", "an", "the",
+    "quite", "very", "essentially", "literally",
+    # Pleasantries (from compress.js)
+    "please", "kindly", "sure", "certainly",
+    "definitely", "absolutely",
+    # Hedging (from compress.js + SKILL.md)
+    "perhaps", "maybe", "probably", "possibly", "likely",
+    "seemingly", "apparently", "somewhat", "rather",
+    # Additional verbosity markers
+    "obviously", "clearly", "exactly", "totally",
+    "completely", "entirely",
+    # Articles (dropped in caveman mode)
+    "a", "an", "the",
 }
 
 CAVEMAN_SKILL_MD = """---
