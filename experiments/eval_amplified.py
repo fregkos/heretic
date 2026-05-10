@@ -271,21 +271,16 @@ def main():
         print("=" * 60)
         lm_eval_tasks = ["mmlu", "gsm8k"]
 
-        for model_name, model_path in [
-            ("baseline", args.baseline),
-        ]:
-            if args.amplified:
-                model_name_additional = "amplified"
-                model_path_additional = args.amplified
+        models_to_eval = [("baseline", args.baseline)]
+        if args.amplified:
+            models_to_eval.append(("amplified", args.amplified))
+        if args.finetuned:
+            models_to_eval.append(("finetuned", args.finetuned))
 
+        for model_name, model_path in models_to_eval:
             print(f"Running lm-eval for {model_name}...")
             lm_results = run_lm_eval(model_path, lm_eval_tasks, args.quantization)
             all_results[model_name]["lm_eval"] = lm_results
-
-        if args.amplified:
-            print(f"Running lm-eval for amplified...")
-            lm_results = run_lm_eval(args.amplified, lm_eval_tasks, args.quantization)
-            all_results["amplified"]["lm_eval"] = lm_results
 
     # Summary
     print("\n" + "=" * 60)
